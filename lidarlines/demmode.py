@@ -2,13 +2,11 @@ import numpy as np
 from osgeo import gdal
 from pyproj import Transformer
 from rdp import rdp
-from uavplanner import FlightPlan
-from uavplanner.crs import point_to_wgs84
-from uavplanner.planner_types import FlightLine, Waypoint
-from uavplanner.reader import read_tif
 
-from .crs import point_to_projected
-from .reader import Raster
+from .crs import point_to_wgs84
+from .planner_types import FlightLine, Waypoint, FlightPlan
+from .reader import read_tif, Raster
+
 
 
 def _sample_tif(r: Raster, x: float, y: float, dsm=False) -> float:
