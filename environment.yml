@@ -1,0 +1,14 @@
+name: uavplanner
+channels:
+  - conda-forge
+dependencies:
+  - gdal
+  - ipykernel
+  - matplotlib
+  - pip
+  - pyproj
+  - python=3.10
+  - shapely
+  - simplekml
+  - pip:
+    - rdp

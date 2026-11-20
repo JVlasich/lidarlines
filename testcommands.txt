@@ -1,0 +1,3 @@
+Python -m uavplanner sample_aoi/pielach.geojson -o pielach.kml --altitude 70 --fov 70 --prf 300000 --velocity 15 --lead-in 20 --overlap 0.05 ; Python plot_mission.py pielach.kml sample_aoi/pielach.geojson
+
+Python -m uavplanner sample_aoi/problem.geojson -o problem.kml --altitude 70 --fov 70 --prf 300000 --velocity 15 --overlap 0.05 ; Python plot_mission.py problem.kml sample_aoi/problem.geojson
