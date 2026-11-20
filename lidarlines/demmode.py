@@ -3,10 +3,8 @@ from osgeo import gdal
 from pyproj import Transformer
 from rdp import rdp
 
-from .crs import point_to_wgs84
-from .planner_types import FlightLine, Waypoint, FlightPlan
-from .reader import read_tif, Raster
-
+from .planner_types import FlightLine, FlightPlan, Waypoint
+from .reader import Raster, read_tif
 
 
 def _sample_tif(r: Raster, x: float, y: float, dsm=False) -> float:
@@ -17,7 +15,13 @@ def _sample_tif(r: Raster, x: float, y: float, dsm=False) -> float:
     i = 1 if not dsm else 2
     window = r.data[row-i:row+i+1, col-i:col+i+1]
 
-    return np.nanmax(window)
+    return np.nanmax(window) if dsm else np.nanmean(window)
+
+def _vdist(p, a, b):
+    """vertical distance of p from chord a-b, all (s, z)"""
+    if b[0] == a[0]:
+        return abs(p[1] - a[1])
+    return abs(p[1] - (a[1] + (b[1] - a[1]) * (p[0] - a[0]) / (b[0] - a[0])))
 
 
 def _profile_polyline(vertices, r, clearance, epsilon, dsm=False) -> np.ndarray:
@@ -36,7 +40,7 @@ def _profile_polyline(vertices, r, clearance, epsilon, dsm=False) -> np.ndarray:
         altitudes += clearance # height above ground, can happen at any point tbh
 
         profile = np.column_stack([s, altitudes])   # shape (n, 2)
-        mask = rdp(profile, epsilon=epsilon, return_mask=True)
+        mask = rdp(profile, epsilon=epsilon, dist=_vdist, return_mask=True)
 
         seg = np.column_stack([pts[mask], altitudes[mask]]) # (x, y, z)
         # drop the duplicated shared vertex, then collect
@@ -77,14 +81,15 @@ def add_heights_to_plan(plan: FlightPlan, r: Raster, dsm=False, epsilon: float =
 
     for line, nextline in zip(lines, lines[1:]+[None]):
         mainline_xyz = _profile_polyline([xy(line.start), xy(line.end)], r, clearance, epsilon, dsm)
+        transit_wps = []
 
         if nextline is not None:
             verts = [xy(line.end)] + [xy(wp) for wp in line.transit_to_next] + [xy(nextline.start)]
             transit_xyz = _profile_polyline(verts, r, clearance, epsilon, dsm)
-        # which rows of transit_xyz belong in transit_to_next?
+        
+            transit_wps = to_waypoints(transit_xyz)
 
         mainline_wps = to_waypoints(mainline_xyz)
-        transit_wps = to_waypoints(transit_xyz)
 
         newlines.append(FlightLine(
             index=line.index,

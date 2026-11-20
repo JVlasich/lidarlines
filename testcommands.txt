@@ -1,3 +1,5 @@
 Python -m uavplanner sample_aoi/pielach.geojson -o pielach.kml --altitude 70 --fov 70 --prf 300000 --velocity 15 --lead-in 20 --overlap 0.05 ; Python plot_mission.py pielach.kml sample_aoi/pielach.geojson
 
 Python -m uavplanner sample_aoi/problem.geojson -o problem.kml --altitude 70 --fov 70 --prf 300000 --velocity 15 --overlap 0.05 ; Python plot_mission.py problem.kml sample_aoi/problem.geojson
+
+python -m lidarlines sample_aoi/zoebelboden_aoi_tal.geojson --altitude 100 --velocity 5 --fov 60 --overlap 0.5 --lead-in 5 --tolerance 8 --prf 200000 --epsg 25833 --dem data/dtm_zoebelboden_1m.tif --mission single_grid -o zoeb.kml

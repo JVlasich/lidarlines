@@ -1,9 +1,12 @@
 # cli.py
 import argparse
+from pathlib import Path
 
+from .clearance_chek import check_clearance
+from .demmode import add_heights_to_plan
 from .planner import plan_mission
 from .planner_types import MissionParams
-from .reader import read_polygon
+from .reader import read_polygon, read_tif
 from .writer import write_kml
 
 
@@ -24,10 +27,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--azimuth", type=_azimuth, default=None, help="main flight direction [deg clockwise from north], or 'auto' (default) to pick the shortest",)
     p.add_argument("--overlap", type=float, default=0.3, help="swath overlap, fraction 0..1")
     p.add_argument("--lead-in", type=float, default=0.0, help="line extension on both ends [m]")
+    p.add_argument("--tolerance", dest="epsilon", type=float, default=5, help="Tolerance for the smoothing of the Flightline (dem-mode only); added to altitude for safety but final altitude can be 2*tolerance higher than altitude")
     p.add_argument("--mission", default="single_grid", choices=["single_grid", "double_grid"], help="mission type",)
     p.add_argument("--prf", type=float, default=None, help="pulse repetition frequency [Hz], enables point density estimate",)
     p.add_argument("--epsg", type=int, default=None, help="projected EPSG code (default: auto UTM zone)",)
     p.add_argument("--restricted", action="store_true", help="keep transits inside the AOI (no-fly outside)")
+    p.add_argument("--dem", default=None, help="Path to a DEM to write the kml in absolute altitude mode instead of relativetoground")
     return p
 
 
@@ -49,7 +54,15 @@ def main(argv=None) -> None:
 
     polygon = read_polygon(args.input)
     plan = plan_mission(polygon, params)
+
+    if args.dem and Path(args.dem).is_file():
+        r = read_tif(args.dem)
+        plan = add_heights_to_plan(plan, r, dsm=("dsm" in args.dem), epsilon=args.epsilon)
+
     m = plan.metrics
+
+    if args.dem and Path(args.dem).is_file():
+        check_clearance(plan, r, params.altitude)
 
     print(f"mission type:         {params.mission_type}")
     print(f"flight azimuth:       {m.azimuth:.0f} deg{' (auto)' if args.azimuth is None else ''}")
